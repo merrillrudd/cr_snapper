@@ -186,7 +186,7 @@ Type objective_function<Type>::operator() ()
       // Population abundance
       if(t>=1 & a==0) N_ta(t,a) = R_t(t);
       if(t>=1 & a>=1 & a<AgeMax) N_ta(t,a) = N_ta(t-1,a-1)*exp(-M-F_t(t-1)*S_a(a-1));
-      if(t>=1 & a==AgeMax) N_ta(t,a) = (N_ta(t-1,a-1) + N_ta(t-1,a))*exp(-M-F_t(t-1)*S_a(a-1));
+      if(t>=1 & a==AgeMax) N_ta(t,a) = (N_ta(t-1,a-1)*exp(-M-F_t(t-1)*S_a(a-1))) + (N_ta(t-1,a)*exp(-M-F_t(t-1)*S_a(a)));
 
       // Spawning biomass
       SB_ta(t,a) = N_ta(t,a)*Mat_a(a)*W_a(a);

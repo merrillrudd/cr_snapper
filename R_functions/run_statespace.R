@@ -1,8 +1,7 @@
 run_statespace <- function(lh, catch, index, lengthfreq, 
-	obs_per_yr, model_name, years, dat_avail, 
+	obs_per_yr, model_name, years, dat_avail, RecType,
 	version="lb_statespace", model_dir, obs_meanlen, est_params=c("log_F_t_input", "log_q_I", "beta", "log_sigma_R", "S50", "CV_l")){
 
-	RecType <- 0
 	if(RecType!=2) RecDev_biasadj1 <- rep(1, length(years))
 	if(RecType==2) RecDev_biasadj1 <- rep(0, length(years))
 
@@ -36,6 +35,7 @@ obj1$hessian <- FALSE
     Upr[match("Sslope", names(obj1$par))] = log(5)
     Upr[which(names(obj1$par)=="log_F_t_input")] = log(2)
     Upr[match("log_F_sd", names(obj1$par))] <- log(2)
+    Upr[match("dome", names(obj1$par))] <- 0.005
     Lwr = rep(-Inf, length(obj1$par))
     Lwr[which(names(obj1$par)=="log_F_t_input")] = log(0.001) 
     Lwr[which(names(obj1$par)=="log_sigma_R")] = log(0.001)
@@ -55,11 +55,11 @@ Report1 = obj1$report()
 Sdreport1 = tryCatch( sdreport(obj1), error=function(x) NA )
 ParList <- obj1$env$parList( obj1$env$last.par.best )
 
-if(all(is.na(Sdreport1))) RecDev_biasadj <- rep(1, scenario_setup$Nyears)
+if(all(is.na(Sdreport1))) RecDev_biasadj <- rep(1, length(years))
 if(all(is.na(Sdreport1))==FALSE){
     SD <- summary(Sdreport1)
     if(RecType!=2) RecDev_biasadj <- 1 - SD[which(rownames(SD)=="Nu_input"), "Std. Error"]^2 / Report1$sigma_R^2    
-    if(RecType==2) RecDev_biasadj <- rep(0, scenario_setup$Nyears)
+    if(RecType==2) RecDev_biasadj <- rep(0, length(years))
 }
 
 TmbList <- format_tmb_inputs(Nyears=length(years), Nlenbins=length(lh$mids),
@@ -92,6 +92,7 @@ obj$hessian <- FALSE
     Upr[match("Sslope", names(obj$par))] = log(5)
     Upr[which(names(obj$par)=="log_F_t_input")] = log(2)
     Upr[match("log_F_sd", names(obj$par))] <- log(2)
+    Upr[match("dome", names(obj$par))] <- 0.005
     Lwr = rep(-Inf, length(obj$par))
     Lwr[which(names(obj$par)=="log_F_t_input")] = log(0.001) 
     Lwr[which(names(obj$par)=="log_sigma_R")] = log(0.001)

@@ -9,7 +9,7 @@ create_inputs <- function(simdir, param, val, lh_dat){
 	}
 
 	## adjust DataList
-	if(simdir == "sensitivity"){
+	if(grepl("sensitivity", simdir)){
 		dat_input <- lh_dat
 		dat_input$SigmaR <- 0.6
 		dat_input$SigmaF <- 0.2

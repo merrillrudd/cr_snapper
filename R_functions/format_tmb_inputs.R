@@ -2,7 +2,7 @@ format_tmb_inputs <- function(Nyears, Nlenbins, catch, index, lengthfreq,
 	linf, vbk, t0, M, AgeMax, lbhighs, lbmids, Mat_a, lwa, lwb, 
 	CV_catch, CV_length, F1, SigmaR, qcoef, R0, Sslope, S50, dome,
 	RecDev_biasadj, Fpen, Dpen, Dprior, obs_per_yr, SigmaF,
-	RecType, h, dat_avail, est_params=c("log_F_t_input", "log_q_I", "beta", "log_sigma_R", "S50", "CV_l")){
+	RecType, h, dat_avail, est_params){
 
 	if("lengthfreq_multiple" %in% dat_avail){
 		n_lc <- nrow(lengthfreq)
@@ -62,7 +62,7 @@ format_tmb_inputs <- function(Nyears, Nlenbins, catch, index, lengthfreq,
 		beta=log(R0),
 		log_sigma_R=log(SigmaR), 
 		Sslope=Sslope, S50=S50, dome=dome,
-    CV_c=CV_catch, CV_l=CV_length,
+    	CV_c=CV_catch, CV_l=CV_length,
 		Nu_input=rep(0,Nyears))
 
     if(RecType!=2) Random <- c("Nu_input")
@@ -73,13 +73,11 @@ format_tmb_inputs <- function(Nyears, Nlenbins, catch, index, lengthfreq,
   all_params <- c("log_F_sd", "log_F_t_input", "log_q_I", 
     "beta", "log_sigma_R", "Sslope", "S50", "dome", "CV_c", 
     "CV_l")
-  fix_params <- NULL
 
   for(a in 1:length(all_params)){
     if(all_params[a] %in% est_params) next
     Map[[all_params[a]]] <- NA
     Map[[all_params[a]]] <- factor(Map[[all_params[a]]])
-    fix_params <- c(fix_params, all_params[a])
   }
 
     if(RecType==2){
