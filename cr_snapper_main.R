@@ -17,8 +17,17 @@ rm(list=ls())
 
 init_dir <- "C:\\Git_Projects\\cr_snapper"
 
+output_dir <- file.path(init_dir, "output")
+dir.create(output_dir, showWarnings=FALSE)
+
+retro_dir <- file.path(init_dir, "retrospective")
+dir.create(retro_dir, showWarnings=FALSE)
+
 fig_dir <- file.path(init_dir, "figs")
 dir.create(fig_dir, showWarnings=FALSE)
+
+model_fits_dir <- file.path(fig_dir, "model_fits")
+dir.create(model_fits_dir, showWarnings=FALSE)
 
 
 setwd(init_dir)
@@ -29,7 +38,6 @@ source("R_functions\\functions.R")
 #########################
 
 cr_lh <- create_lh(species="CRSNAP", selex="asymptotic")
-cr_lh_dome <- create_lh(species="CRSNAP", selex="dome")
 
 #########################
 ## read in data + 
@@ -39,8 +47,12 @@ cr_lh_dome <- create_lh(species="CRSNAP", selex="dome")
 data_raw <- read.csv(file.path(init_dir, "cr_snapper_database.csv"), 
 	stringsAsFactors=FALSE)
 
-data_raw$Year <- sapply(1:nrow(data_raw), function(x) adjust_date(data_raw$Date[x]))
+data_raw$Year <- sapply(1:nrow(data_raw), function(x) adjust_date(data_raw$Date[x], out="year"))
+data_raw$Month <- sapply(1:nrow(data_raw), function(x) adjust_date(data_raw$Date[x], out="month"))
 data_raw$TL_cm <- as.numeric(data_raw$TL_cm)
+data_raw$W_g <- as.numeric(data_raw$W_g)
+	data_raw$W_g[which(data_raw$W_g==0)] <- NA
+data_raw$W_kg <- data_raw$W_g/1000
 
 #############################
 ## subset Lutjanus guttatus
@@ -86,7 +98,8 @@ fishery_data <- catch_effort(data=lg, sep_index=TRUE)
 catch <- fishery_data$catch
 cpue_bl <- fishery_data$cpue_bl
 cpue_g <- fishery_data$cpue_g
-obs_per_yr <- fishery_data$obs_per_yr
+obs_high <- fishery_data$obs_high
+obs_low <- fishery_data$obs_low
 years <- fishery_data$years
 
 par(mfrow=c(2,1))
@@ -100,18 +113,20 @@ plot(cpue_g, pch=19, ylim=c(0, max(cpue_g, na.rm=TRUE)))
 setwd(init_dir)
 source("R_functions\\functions.R")
 
-cpue_yrs <- which(is.na(cpue_bl)==FALSE)
-lf_years <- which(years %in% rownames(lf)[which(rowSums(lf)>0)])
-catch_yrs <- years
-
-catch_input <- (rep(300, length(years))*907185)/mean(as.numeric(lg$W_g), na.rm=TRUE)
+## bottom longline cpue index
 cpue_input <- cpue_bl[which(is.na(cpue_bl)==FALSE)] ## choose bottom longline cpue only
-lf_input <- lf[which(rowSums(lf)>0),]
-obs_input <- obs_per_yr
-
-names(catch_input) <- catch_yrs
+cpue_yrs <- which(is.na(cpue_bl)==FALSE)
 names(cpue_input) <- cpue_yrs
-rownames(lf_input) <- lf_years
+
+## length frequency
+lf_input <- lf[which(rowSums(lf)>0),]
+lf_yrs <- which(years %in% rownames(lf)[which(rowSums(lf)>0)])
+rownames(lf_input) <- lf_yrs
+
+## catch - approximation based on 300 metric tons/year
+catch_input <- 3e8/mean(as.numeric(lg$W_g), na.rm=TRUE)
+catch_yrs <- 2015
+names(catch_input) <- catch_yrs
 
 ########################################
 ## length-based state-space assessment
@@ -125,194 +140,72 @@ dyn.unload(paste0(version, ".dll"))
 # file.remove(paste(version, c(".dll", ".o"), sep=""))
 # compile(paste0(version, ".cpp"))
 
-##########
-## base
-##########
-
-model_name <- "base"
-dat_input <- create_inputs(simdir=model_name, param=FALSE, val=FALSE, lh_dat=cr_lh)
-
-model_dir <- file.path(init_dir, model_name)
-if(file.exists(model_dir)) unlink(model_dir, TRUE)
-dir.create(model_dir, showWarnings=FALSE)
-
-# lh <- dat_input
-# catch <- catch_input
-# index <- cpue_input
-# lengthfreq <- lf_input
-# obs_per_yr <- obs_input
-# dat_avail <- c("lengthfreq_multiple", "catch_total", "index_total")
-# version <- "lb_statespace"
-# obs_meanlen=ml$all_gears
-# RecType <- 0
-# est_params=c("log_F_t_input", "log_q_I", "beta", "log_sigma_R", "S50", "CV_l", "CV_c")
+### base
 
 setwd(init_dir)
 source("R_functions\\functions.R")
 
-base <- run_statespace(lh=dat_input, years=years, catch=NULL, 
-	index=cpue_input, lengthfreq=lf_input, obs_per_yr=obs_input, 
-	dat_avail=c("lengthfreq_multiple", "index_total"),
-	model_name=model_name, model_dir=model_dir, obs_meanlen=ml$all_gears, RecType=0,
-	est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c"))
+base <- get_output(model_name="base", dat_avail=c("lengthfreq", "index_total"),
+	rec_type=0, est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c"),
+	years=years, index=cpue_input, lengthfreq=lf_input, catch=NULL, obs_per_yr=obs_high)
 
-base_rep <- readRDS(file.path(init_dir, model_name, "Report.rds"))
+## low obs per year
 
+lowObs <- get_output(model_name="lowObs", dat_avail=c("lengthfreq", "index_total"),
+	rec_type=0, est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l"),
+	years=years, index=cpue_input, lengthfreq=lf_input, catch=NULL, obs_per_yr=obs_low)
 
-## sensitivity - adjust F1 high
+### base with beverton-holt stock recruit 
 
-model_name <- "sensitivity_R0low"
-dat_input <- create_inputs(simdir=model_name, param="F1", val=0.5, lh_dat=cr_lh)
+base_bh <- get_output(model_name="base_bh", dat_avail=c("lengthfreq", "index_total"),
+	rec_type=1, est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c"),
+	years=years, index=cpue_input, lengthfreq=lf_input, catch=NULL, obs_per_yr=obs_high)
 
-model_dir <- file.path(init_dir, model_name)
-if(file.exists(model_dir)) unlink(model_dir, TRUE)
-dir.create(model_dir, showWarnings=FALSE)
+#################
+## include catch
+#################
 
-sens_R0low <- run_statespace(lh=dat_input, years=years, catch=NULL, 
-	index=cpue_input, lengthfreq=lf_input, obs_per_yr=obs_input, 
-	dat_avail=c("lengthfreq_multiple", "index_total"),
-	model_name=model_name, model_dir=model_dir, obs_meanlen=ml$all_gears, RecType=0,
-	est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c"))
-
-sens_R0low_rep <- readRDS(file.path(init_dir, model_name, "Report.rds"))
+wCatch <- get_output(model_name="wCatch", dat_avail=c("lengthfreq", "catch_total", "index_total"),
+	rec_type=0, est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "beta", "S50", "CV_l"),
+	years=years, index=cpue_input, lengthfreq=lf_input, catch=catch_input, obs_per_yr=obs_high)
 
 
 ## sensitivity - adjust F1 low
 
-model_name <- "sensitivity_F1low"
-dat_input <- create_inputs(simdir=model_name, param="F1", val=0.25, lh_dat=cr_lh)
+F1low <- get_output(model_name="F1low", dat_avail=c("lengthfreq", "index_total"),
+	rec_type=0, est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c"),
+	years=years, index=cpue_input, lengthfreq=lf_input, catch=NULL, obs_per_yr=obs_high,
+	adjust_param="F1", adjust_val=0.01)
 
-model_dir <- file.path(init_dir, model_name)
-if(file.exists(model_dir)) unlink(model_dir, TRUE)
-dir.create(model_dir, showWarnings=FALSE)
+## sensitivity - adjust F1 high
 
-sens_F1low <- run_statespace(lh=dat_input, years=years, catch=NULL, 
-	index=cpue_input, lengthfreq=lf_input, obs_per_yr=obs_input, 
-	dat_avail=c("lengthfreq_multiple", "index_total"),
-	model_name=model_name, model_dir=model_dir, obs_meanlen=ml$all_gears, RecType=0,
-	est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c"))
+F1high <- get_output(model_name="F1high", dat_avail=c("lengthfreq", "index_total"),
+	rec_type=0, est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c"),
+	years=years, index=cpue_input, lengthfreq=lf_input, catch=NULL, obs_per_yr=obs_high,
+	adjust_param="F1", adjust_val=0.4)
 
-sens_F1low_rep <- readRDS(file.path(init_dir, model_name, "Report.rds"))
+## dome selex
 
+dome <- get_output(model_name="dome", dat_avail=c("lengthfreq", "index_total"),
+	rec_type=0, est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c"),
+	years=years, index=cpue_input, lengthfreq=lf_input, catch=NULL, obs_per_yr=obs_high,
+	adjust_param="dome", adjust_val=0.01)
 
-## sensitivity - adjust R0 higher
+## fix CVc
 
-model_name <- "sensitivity_R0high"
-dat_input <- create_inputs(simdir=model_name, param="R0", val=1e10, lh_dat=cr_lh)
-
-model_dir <- file.path(init_dir, model_name)
-if(file.exists(model_dir)) unlink(model_dir, TRUE)
-dir.create(model_dir, showWarnings=FALSE)
-
-sens_R0high <- run_statespace(lh=dat_input, years=years, catch=NULL, 
-	index=cpue_input, lengthfreq=lf_input, obs_per_yr=obs_input, 
-	dat_avail=c("lengthfreq_multiple", "index_total"),
-	model_name=model_name, model_dir=model_dir, obs_meanlen=ml$all_gears, RecType=0,
-	est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c"))
-
-sens_R0high_rep <- readRDS(file.path(init_dir, model_name, "Report.rds"))
-
-## sensitivity - adjust R0 lower
-
-model_name <- "sensitivity_R0low"
-dat_input <- create_inputs(simdir=model_name, param="R0", val=1e6, lh_dat=cr_lh)
-
-model_dir <- file.path(init_dir, model_name)
-if(file.exists(model_dir)) unlink(model_dir, TRUE)
-dir.create(model_dir, showWarnings=FALSE)
-
-sens_R0low <- run_statespace(lh=dat_input, years=years, catch=NULL, 
-	index=cpue_input, lengthfreq=lf_input, obs_per_yr=obs_input, 
-	dat_avail=c("lengthfreq_multiple", "index_total"),
-	model_name=model_name, model_dir=model_dir, obs_meanlen=ml$all_gears, RecType=0,
-	est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c"))
-
-sens_R0low_rep <- readRDS(file.path(init_dir, model_name, "Report.rds"))
+fixCVc <- get_output(model_name="fixCVc", dat_avail=c("lengthfreq", "index_total"),
+	rec_type=0, est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l"),
+	years=years, index=cpue_input, lengthfreq=lf_input, catch=NULL, obs_per_yr=obs_high)
 
 
-##########
-## base assuming dome-shaped selex
-##########
+## retrospective
 
-model_name <- "base_dome"
-dat_input <- create_inputs(simdir=model_name, param=FALSE, val=FALSE, lh_dat=cr_lh_dome)
-
-model_dir <- file.path(init_dir, model_name)
-if(file.exists(model_dir)) unlink(model_dir, TRUE)
-dir.create(model_dir, showWarnings=FALSE)
-
-base_dome <- run_statespace(lh=dat_input, years=years, catch=NULL, 
-	index=cpue_input, lengthfreq=lf_input, obs_per_yr=obs_input, 
-	dat_avail=c("lengthfreq_multiple", "index_total"),
-	model_name=model_name, model_dir=model_dir, obs_meanlen=ml$all_gears, RecType=0,
-	est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c"))
-
-base_dome_rep <- readRDS(file.path(init_dir, model_name, "Report.rds"))
-
-
-
-
-
-
-
-
-## base with BH recruitment
-
-setwd(init_dir)
-source("R_functions\\functions.R")
-
-model_name <- "base_bh"
-model_dir <- file.path(init_dir, model_name)
-if(file.exists(model_dir)) unlink(model_dir, TRUE)
-dir.create(model_dir, showWarnings=FALSE)
-
-base_bh <- run_statespace(lh=dat_input, years=years, catch=catch_input, 
-	index=cpue_input, lengthfreq=lf_input, obs_per_yr=obs_input, 
-	dat_avail=c("lengthfreq_multiple", "catch_total", "index_total"),
-	model_name=model_name, model_dir=model_dir, obs_meanlen=ml$all_gears, RecType=1,
-	est_params=c("log_F_t_input", "log_q_I", "beta", "log_sigma_R", "S50", "CV_l", "CV_c"))
-
-base_bh_rep <- readRDS(file.path(init_dir, model_name, "Report.rds"))
-
-## base with BH recruitment fix CVc
-
-setwd(init_dir)
-source("R_functions\\functions.R")
-
-model_name <- "base_bh_fixCVc"
-model_dir <- file.path(init_dir, model_name)
-if(file.exists(model_dir)) unlink(model_dir, TRUE)
-dir.create(model_dir, showWarnings=FALSE)
-
-base_bh_fixCVc <- run_statespace(lh=dat_input, years=years, catch=catch_input, 
-	index=cpue_input, lengthfreq=lf_input, obs_per_yr=obs_input, 
-	dat_avail=c("lengthfreq_multiple", "catch_total", "index_total"),
-	model_name=model_name, model_dir=model_dir, obs_meanlen=ml$all_gears, RecType=1,
-	est_params=c("log_F_t_input", "log_q_I", "beta", "log_sigma_R", "S50", "CV_l"))
-
-base_bh_fixCVc_rep <- readRDS(file.path(init_dir, model_name, "Report.rds"))
-
-
-## remove catch
-
-setwd(init_dir)
-source("R_functions\\functions.R")
-
-model_name <- "rm_catch"
-dat_input <- create_inputs(simdir=model_name, param=FALSE, val=FALSE, lh_dat=cr_lh)
-
-model_dir <- file.path(init_dir, model_name)
-if(file.exists(model_dir)) unlink(model_dir, TRUE)
-dir.create(model_dir, showWarnings=FALSE)
-
-setwd(init_dir)
-source("R_functions\\functions.R")
-
-rm_catch <- run_statespace(lh=dat_input, years=years, catch=NULL, 
-	index=cpue_input, lengthfreq=lf_input, obs_per_yr=obs_input, 
-	dat_avail=c("lengthfreq_multiple", "index_total"),
-	model_name=model_name, model_dir=model_dir, obs_meanlen=ml$all_gears, RecType=0,
-	est_params=c("log_F_t_input", "log_q_I", "beta", "log_sigma_R", "S50", "CV_l", "CV_c"))
-
-rm_catch_rep <- readRDS(file.path(init_dir, model_name, "Report.rds"))
-
+index <- cpue_input
+lengthfreq <- lf_input
+catch <- NULL
+dat_avail <- c("lengthfreq", "index_total")
+est_params <- c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c")
+rec_type <- 0
+adjust_param <- FALSE
+adjust_val <- FALSE
+obs_meanlen <- ml$all_gears
