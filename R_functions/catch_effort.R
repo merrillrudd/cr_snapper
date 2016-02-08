@@ -24,10 +24,11 @@ if(sep_index==FALSE){
 if(length(which(data$Effort_index[gillnet_index] < 0))!=0) stop("gillnet effort indices < 0")
 if(length(which(data$Effort_index[longline_index] < 0))!=0) stop("longline effort indices < 0")
 
-obs_per_yr <- rep(NA, length(years))
+obs_high <- obs_low <- rep(NA, length(years))
 for(i in 1:length(years)){
 	subyr <- data[which(data$Year==years[i]),]
-	obs_per_yr[i] <- length(unique(subyr$Date))
+	obs_high[i] <- length(unique(subyr$Date))
+	obs_low[i] <- length(unique(subyr$Month))
 }
 
 
@@ -121,7 +122,8 @@ names(cpue_g) <- years
 	Outs <- NULL
 	Outs$catch <- catch
 	if(sep_index==FALSE) Outs$cpue <- cpue
-	Outs$obs_per_yr <- obs_per_yr
+	Outs$obs_high <- obs_high
+	Outs$obs_low <- obs_low
 	Outs$years <- years
 	if(sep_index==TRUE){
 		Outs$cpue_bl <- cpue_bl

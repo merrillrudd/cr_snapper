@@ -1,6 +1,7 @@
 run_statespace <- function(lh, catch, index, lengthfreq, 
-	obs_per_yr, model_name, years, dat_avail, RecType,
-	version="lb_statespace", model_dir, obs_meanlen, est_params=c("log_F_t_input", "log_q_I", "beta", "log_sigma_R", "S50", "CV_l")){
+	obs_per_yr, model_name, years, dat_avail, RecType, 
+	version="lb_statespace", model_dir, obs_meanlen, plot=TRUE,
+  est_params=c("log_F_t_input", "log_q_I", "beta", "log_sigma_R", "S50", "CV_l")){
 
 	if(RecType!=2) RecDev_biasadj1 <- rep(1, length(years))
 	if(RecType==2) RecDev_biasadj1 <- rep(0, length(years))
@@ -31,7 +32,7 @@ obj1$env$inner.control <- c(obj1$env$inner.control, "step.tol"=c(1e-8,1e-12)[1],
 obj1$hessian <- FALSE 
   Upr = rep(Inf, length(obj1$par))
     Upr[match("log_sigma_R",names(obj1$par))] = log(2)
-    Upr[match("S50", names(obj1$par))] = dat_input$AgeMax
+    Upr[match("S50", names(obj1$par))] = lh$AgeMax
     Upr[match("Sslope", names(obj1$par))] = log(5)
     Upr[which(names(obj1$par)=="log_F_t_input")] = log(2)
     Upr[match("log_F_sd", names(obj1$par))] <- log(2)
@@ -88,7 +89,7 @@ obj$env$inner.control <- c(obj$env$inner.control, "step.tol"=c(1e-8,1e-12)[1], "
 obj$hessian <- FALSE 
   Upr = rep(Inf, length(obj$par))
     Upr[match("log_sigma_R",names(obj$par))] = log(2)
-    Upr[match("S50", names(obj$par))] = dat_input$AgeMax
+    Upr[match("S50", names(obj$par))] = lh$AgeMax
     Upr[match("Sslope", names(obj$par))] = log(5)
     Upr[which(names(obj$par)=="log_F_t_input")] = log(2)
     Upr[match("log_F_sd", names(obj$par))] <- log(2)
@@ -163,67 +164,19 @@ Report = tryCatch( obj$report(), error=function(x) NA)
 
 Sdreport = tryCatch( sdreport(obj), error=function(x) NA )
   saveRDS(Sdreport, file.path(model_dir, "Sdreport.rds"))
+  if(all(is.na(Sdreport))) write(file.path(model_dir, "NAs_SDreport.txt"))
 
-
-  if(file.exists(file.path(fig_dir, paste0(model_name, "_output.png")))) unlink(file.path(fig_dir, paste0(model_name, "_output.png")), TRUE)
-	png(file=file.path(fig_dir, paste0(model_name, "_output.png")), width=9, height=6, res=200, units="in")
-      	par(mfrow=c(3,3), mar=c(3,3,2,0))
-        FUN = function(InputMat, log=TRUE){
-          if(log==TRUE) return(c( exp(InputMat[,1]-1*InputMat[,2]), rev(exp(InputMat[,1]+1*InputMat[,2]))))
-          if(log==FALSE) return(c( InputMat[,1]-1*InputMat[,2], rev(InputMat[,1]+1*InputMat[,2])))
-        } 
-        ## Abundance
-        Mat <- cbind("Year"=years, "Est"=Report$SB_t_hat)
-        ymax <- ifelse(max(Mat[,c("Est")], na.rm=TRUE)==Inf, 1, max(Mat[,c("Est")], na.rm=TRUE)*1.5)
-        matplot(y=Mat[,c("Est")], x=Mat[,c("Year")], type="l", col=c("red"), lty="solid", ylim=c(0, ymax), main="Biomass", lwd=2)
-        if(all(is.na(Sdreport))==FALSE) if( !("condition" %in% names(attributes(Sdreport)))) polygon( y=FUN(summary(Sdreport)[which(rownames(summary(Sdreport))=="lSB_t"),]), x=c(Mat[,c("Year")], rev(Mat[,c("Year")])), col=rgb(1,0,0,alpha=0.2), border=NA)
-        ## Index
-        Mat <- cbind("Year"=years, "Est"=Report$N_t_hat)
-        ymax <- ifelse(max(Mat[,c("Est")], na.rm=TRUE)==Inf, 1, max(Mat[,c("Est")], na.rm=TRUE)*1.5)
-        matplot(y=Mat[,c("Est")], x=Mat[,c("Year")], type="l", col=c("red"), lty="solid", ylim=c(0, ymax), main="Abundance", lwd=2)
-        if(all(is.na(Sdreport))==FALSE)if( !("condition" %in% names(attributes(Sdreport)))) polygon( y=FUN(summary(Sdreport)[which(rownames(summary(Sdreport))=="lN_t"),]), x=c(Mat[,c("Year")], rev(Mat[,c("Year")])), col=rgb(1,0,0,alpha=0.2), border=NA)
-        ## Recruitment
-        Mat <- cbind("Year"=years, "Est"=Report$R_t_hat)
-        ymax <- ifelse(max(Mat[,c("Est")], na.rm=TRUE)==Inf, 1, max(Mat[,c("Est")], na.rm=TRUE)*1.5)    
-        matplot(y=Mat[,c("Est")], x=Mat[,c("Year")], type="l", col=c("red"), lty="solid", ylim=c(0, ymax), main="Recruitment", lwd=2)
-        if(all(is.na(Sdreport))==FALSE) if( !("condition" %in% names(attributes(Sdreport)))) polygon( y=FUN(summary(Sdreport)[which(rownames(summary(Sdreport))=="lR_t"),]), x=c(Mat[,c("Year")], rev(Mat[,c("Year")])), col=rgb(1,0,0,alpha=0.2), border=NA)
-        ## Fishing Mortality
-        Mat <- cbind("Year"=years, "Est"=Report$F_t)
-        ymax <- ifelse(max(Mat[,c("Est")], na.rm=TRUE)==Inf, 1, max(Mat[,c("Est")], na.rm=TRUE)*1.5)
-        matplot(y=Mat[,c("Est")], x=Mat[,c("Year")], type="l", col=c("red"), lty="solid", ylim=c(0, ymax), main="Fishing Mortality", lwd=2)
-        if(all(is.na(Sdreport))==FALSE)if( !("condition" %in% names(attributes(Sdreport)))) polygon( y=FUN(summary(Sdreport)[which(rownames(summary(Sdreport))=="lF_t"),]), x=c(Mat[,c("Year")], rev(Mat[,c("Year")])), col=rgb(1,0,0,alpha=0.2), border=NA)
-        ## Depletion
-        Mat <- cbind("Year"=years, "Est"=Report$Depl)
-        ymax <- ifelse(max(Mat[,c("Est")], na.rm=TRUE)==Inf, 1, max(Mat[,c("Est")], na.rm=TRUE)*1.5)
-        matplot(y=Mat[,c("Est")], x=Mat[,c("Year")], type="l", col=c("red"), lty="solid", ylim=c(0, ymax), main="Depletion", lwd=2)
-        if(all(is.na(Sdreport))==FALSE)if( !("condition" %in% names(attributes(Sdreport)))) polygon( y=FUN(summary(Sdreport)[which(rownames(summary(Sdreport))=="lD_t"),]), x=c(Mat[,c("Year")], rev(Mat[,c("Year")])), col=rgb(1,0,0,alpha=0.2), border=NA)
-        ## Catch
-        tcatch <- catch_input
-        pcatch <- rep(NA, length(years))
-          names(pcatch) <- years
-        pcatch[which(as.numeric(names(pcatch)) %in% years[as.numeric(names(catch_input))])] <- tcatch
-        Mat <- cbind("Year"=years, "Obs"=pcatch, "Est"=Report$C_t_hat)
-        ymax <- ifelse(max(Mat[,c("Obs", "Est")], na.rm=TRUE)==Inf, 1, max(Mat[,c("Obs", "Est")], na.rm=TRUE)*1.5)
-        matplot(y=Mat[,c("Obs", "Est")], x=Mat[,c("Year")], type=c("p","l"), col=c("black", "red"), lty="solid", pch=19, ylim=c(0, ymax), main="Catch", lwd=2)
-        if(all(is.na(Sdreport))==FALSE)if( !("condition" %in% names(attributes(Sdreport)))) polygon( y=FUN(summary(Sdreport)[which(rownames(summary(Sdreport))=="lC_t"),]), x=c(Mat[,c("Year")], rev(Mat[,c("Year")])), col=rgb(1,0,0,alpha=0.2), border=NA)
-        ## Index
-        tindex <- cpue_input
-        pindex <- rep(NA, length(years))
-          names(pindex) <- years
-        pindex[which(as.numeric(names(pindex)) %in% years[as.numeric(names(cpue_input))])] <- tindex
-        Mat <- cbind("Year"=years, "Obs"=pindex, "Est"=Report$I_t_hat)
-        ymax <- ifelse(max(Mat[,c("Obs", "Est")], na.rm=TRUE)==Inf, 1, max(Mat[,c("Obs", "Est")], na.rm=TRUE)*1.5)
-        matplot(y=Mat[,c("Obs", "Est")], x=Mat[,c("Year")], type=c("p","l"), col=c("black", "red"), lty="solid", pch=19, ylim=c(0, ymax), main="Index", lwd=2)
-        if(all(is.na(Sdreport))==FALSE)if( !("condition" %in% names(attributes(Sdreport)))) polygon( y=FUN(summary(Sdreport)[which(rownames(summary(Sdreport))=="lI_t"),]), x=c(Mat[,c("Year")], rev(Mat[,c("Year")])), col=rgb(1,0,0,alpha=0.2), border=NA)
-        ## Average Length
-        Mat <- cbind("Year"=years, "Obs"=obs_meanlen, "Est"=Report$L_t_hat)
-        ymax <- ifelse(max(Mat[,c("Obs", "Est")], na.rm=TRUE)==Inf, 1, max(Mat[,c("Obs", "Est")], na.rm=TRUE)*1.5)
-        matplot(y=Mat[,c("Obs", "Est")], x=Mat[,c("Year")], type=c("p","l"), col=c("black", "red"), lty="solid", pch=19, ylim=c(0, ymax), main="Average Length", lwd=2)
-        if(all(is.na(Sdreport))==FALSE)if( !("condition" %in% names(attributes(Sdreport)))) polygon( y=FUN(summary(Sdreport)[which(rownames(summary(Sdreport))=="L_t_hat"),], log=FALSE), x=c(Mat[,c("Year")], rev(Mat[,c("Year")])), col=rgb(1,0,0,alpha=0.2), border=NA)
-    dev.off()
+if(plot==TRUE){
+  if(file.exists(file.path(model_fits_dir, paste0(model_name, "_output.png")))) unlink(file.path(model_fits_dir, paste0(model_name, "_output.png")), TRUE)
+	png(file=file.path(model_fits_dir, paste0(model_name, "_output.png")), width=9, height=6, res=200, units="in")
+    mf <- model_fits(Report=Report, Sdreport=Sdreport, years=years,
+      catch_obs=catch, index_obs=index, meanlen_obs=obs_meanlen)
+  dev.off()
+}
 
         dyn.unload( paste0(run_exe,"\\", dynlib(version)) ) 
 
+  if(all(is.na(Sdreport))==FALSE){
         Fmat_l <- summary(Sdreport)[which(rownames(summary(Sdreport))=="lF_t"),]
         Dmat_l <- summary(Sdreport)[which(rownames(summary(Sdreport))=="lD_t"),]
 
@@ -234,6 +187,11 @@ Sdreport = tryCatch( sdreport(obj), error=function(x) NA )
         Outs$df <- df
         Outs$Ft <- Fmat
         Outs$Dt <- Dmat
+  }
+  if(all(is.na(Sdreport))){
+    Outs <- NULL
+    Outs$df <- df
+  }
 
         return(Outs)
 

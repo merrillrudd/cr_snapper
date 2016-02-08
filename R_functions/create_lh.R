@@ -17,7 +17,7 @@ create_lh <- function(species, sens=FALSE, val=FALSE, selex){
 		CVlen <- 0.2
 
 		## recruitment to estimate
-		R0 <- 1e9
+		R0 <- 1
 		h <- 0.7
 
 		## fishery related to estimate

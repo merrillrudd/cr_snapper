@@ -4,13 +4,20 @@ format_tmb_inputs <- function(Nyears, Nlenbins, catch, index, lengthfreq,
 	RecDev_biasadj, Fpen, Dpen, Dprior, obs_per_yr, SigmaF,
 	RecType, h, dat_avail, est_params){
 
-	if("lengthfreq_multiple" %in% dat_avail){
-		n_lc <- nrow(lengthfreq)
+	if("lengthfreq" %in% dat_avail){
+		if(is.matrix(lengthfreq)){
+          n_lc <- nrow(lengthfreq)
+          LC_yrs <- as.numeric(rownames(lengthfreq))
+          LF <- as.matrix(lengthfreq)
+    	}
+    	if(is.vector(lengthfreq)){
+    	  n_lc <- 1
+    	  LC_yrs <- Nyears
+    	  LF <- t(as.matrix(lengthfreq))
+    	}
 		n_ml <- 0
-		LC_yrs <- as.numeric(rownames(lengthfreq))
 		ML_yrs <- as.vector(0)
 		ML_t <- as.vector(0)
-		LF <- lengthfreq
 	}
 	if("catch_total" %in% dat_avail){
 		n_c <- length(catch)
@@ -36,6 +43,7 @@ format_tmb_inputs <- function(Nyears, Nlenbins, catch, index, lengthfreq,
 		rel_c <- 0
 		C_t <- as.vector(0)
 	}
+
 
 	Data <- list(n_t=Nyears, n_lb=Nlenbins,
    		n_c=n_c, n_i=n_i,
