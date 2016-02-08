@@ -141,6 +141,7 @@ Type objective_function<Type>::operator() ()
   matrix<Type> N_ta(n_t,AgeMax+1);
   matrix<Type> SB_ta(n_t,AgeMax+1);
   matrix<Type> Cn_ta(n_t,AgeMax+1);
+  matrix<Type> Cb_ta(n_t,AgeMax+1);
   vector<Type> N_t(n_t);
   vector<Type> SB_t(n_t);
   vector<Type> C_t_hat(n_t);
@@ -162,11 +163,12 @@ Type objective_function<Type>::operator() ()
 
     // Catch
     Cn_ta(0,a) = N_ta(0,a) * (Type(1.0)-exp(-M-F_t(0)*S_a(a))) * (F_t(0)*S_a(a))/(M+F_t(0)*S_a(a));
+    Cb_ta(0,a) = Cn_ta(0,a) * W_a(a);
 
     //Annual values
     if(a>0) N_t(0) += N_ta(0,a);
     if(a>0) SB_t(0) += SB_ta(0,a);
-    C_t_hat(0) += Cn_ta(0,a);
+    C_t_hat(0) += Cb_ta(0,a);
   }
 
   // Project forward in time
@@ -193,11 +195,12 @@ Type objective_function<Type>::operator() ()
       
       // Catch
       Cn_ta(t,a) = N_ta(t,a) * (Type(1.0)-exp(-M-F_t(t)*S_a(a))) * (F_t(t)*S_a(a))/(M+F_t(t)*S_a(a));
+      Cb_ta(t,a) = Cn_ta(t,a) * W_a(a);
 
       //Annual values
       if(a>0) N_t(t) += N_ta(t,a);
       if(a>0) SB_t(t) += SB_ta(t,a);
-      C_t_hat(t) += Cn_ta(t,a);
+      C_t_hat(t) += Cb_ta(t,a);
     }
   }
 
