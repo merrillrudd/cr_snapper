@@ -1,4 +1,4 @@
-format_tmb_inputs <- function(Nyears, Nlenbins, catch, index, lengthfreq,
+format_tmb_inputs <- function(Nyears, Nlenbins, catch, index, lengthfreq, meanlen,
 	linf, vbk, t0, M, AgeMax, lbhighs, lbmids, Mat_a, lwa, lwb, 
 	CV_catch, CV_length, F1, SigmaR, qcoef, R0, Sslope, S50, dome,
 	RecDev_biasadj, Fpen, Dpen, Dprior, obs_per_yr, SigmaF,
@@ -42,6 +42,16 @@ format_tmb_inputs <- function(Nyears, Nlenbins, catch, index, lengthfreq,
 		C_yrs <- as.vector(0)
 		rel_c <- 0
 		C_t <- as.vector(0)
+	}
+	if(any(grepl("lengthfreq", dat_avail))==FALSE){
+		n_lc <- 0
+		LC_yrs <- as.vector(0)
+		LF <- as.matrix(0)
+	}
+	if("meanlength" %in% dat_avail){
+		n_ml <- length(meanlen)
+		ML_yrs <- as.numeric(names(meanlen))
+		ML_t <- meanlen
 	}
 
 

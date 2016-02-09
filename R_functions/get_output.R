@@ -1,5 +1,5 @@
 get_output <- function(model_name, dat_avail, rec_type, est_params, SPR_cut=0.3,
-	adjust_param=FALSE, adjust_val=FALSE, years, index, lengthfreq, catch, obs_per_yr){
+	adjust_param=FALSE, adjust_val=FALSE, years, index, lengthfreq, catch, meanlen, obs_per_yr){
 
   dat_input <- create_inputs(simdir=model_name, param=adjust_param, val=adjust_val, lh_dat=cr_lh)  
 
@@ -10,7 +10,7 @@ get_output <- function(model_name, dat_avail, rec_type, est_params, SPR_cut=0.3,
   run_model <- run_statespace(lh=dat_input, years=years, catch=catch, 
   	index=index, lengthfreq=lengthfreq, obs_per_yr=obs_per_yr, 
   	dat_avail=dat_avail, est_params=est_params, RecType=rec_type,
-  	model_name=model_name, model_dir=model_dir, obs_meanlen=ml$all_gears)  
+  	model_name=model_name, model_dir=model_dir, obs_meanlen=meanlen)  
 
   report <- readRDS(file.path(init_dir, "output", model_name, "Report.rds"))  
 
@@ -24,6 +24,7 @@ get_output <- function(model_name, dat_avail, rec_type, est_params, SPR_cut=0.3,
   FFref <- run_model$Ft[nrow(run_model$Ft), "Estimate"]/Fref 
 
   Outs <- NULL
+  Outs$df <- run_model$df
   Outs$FFref <- FFref
   Outs$SPR <- SPR
   Outs$report <- report

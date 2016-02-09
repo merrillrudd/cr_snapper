@@ -8,7 +8,7 @@ run_statespace <- function(lh, catch, index, lengthfreq,
 
 
 TmbList1 <- format_tmb_inputs(Nyears=length(years), Nlenbins=length(lh$mids),
-	catch=catch, index=index, lengthfreq=lengthfreq,
+	catch=catch, index=index, lengthfreq=lengthfreq, meanlen=obs_meanlen,
 	linf=lh$linf, vbk=lh$vbk, t0=lh$t0, 
 	M=lh$M, AgeMax=lh$AgeMax, lbhighs=lh$highs,
 	lbmids=lh$mids, Mat_a=lh$Mat_a, lwa=lh$lwa,
@@ -64,7 +64,7 @@ if(all(is.na(Sdreport1))==FALSE){
 }
 
 TmbList <- format_tmb_inputs(Nyears=length(years), Nlenbins=length(lh$mids),
-	catch=catch, index=index, lengthfreq=lengthfreq,
+	catch=catch, index=index, lengthfreq=lengthfreq, meanlen=obs_meanlen,
 	linf=lh$linf, vbk=lh$vbk, t0=lh$t0, 
 	M=lh$M, AgeMax=lh$AgeMax, lbhighs=lh$highs,
 	lbmids=lh$mids, Mat_a=lh$Mat_a, lwa=lh$lwa,
