@@ -75,6 +75,7 @@ png(file=file.path(fig_dir, "mean_length_catch.png"), width=6, height=5, units="
 ml <- mean_length(data=lg, plot=TRUE)
 dev.off()
 
+
 ###############################
 ## length frequency
 ###############################
@@ -125,8 +126,13 @@ rownames(lf_input) <- lf_yrs
 
 ## catch - approximation based on 300 metric tons/year
 catch_input <- 3e8/mean(as.numeric(lg$W_g), na.rm=TRUE)
-catch_yrs <- 2015
+catch_yrs <- years[length(years)]
 names(catch_input) <- catch_yrs
+
+## mean length
+meanlen_input <- ml$all_gears
+meanlen_yrs <- 1:length(years)
+names(meanlen_input) <- meanlen_yrs
 
 ########################################
 ## length-based state-space assessment
@@ -147,65 +153,118 @@ source("R_functions\\functions.R")
 
 base <- get_output(model_name="base", dat_avail=c("lengthfreq", "index_total"),
 	rec_type=0, est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c"),
-	years=years, index=cpue_input, lengthfreq=lf_input, catch=NULL, obs_per_yr=obs_high)
+	years=years, index=cpue_input, lengthfreq=lf_input, meanlen=meanlen_input, catch=NULL, obs_per_yr=obs_high)
 
 ## low obs per year
 
 lowObs <- get_output(model_name="lowObs", dat_avail=c("lengthfreq", "index_total"),
-	rec_type=0, est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l"),
-	years=years, index=cpue_input, lengthfreq=lf_input, catch=NULL, obs_per_yr=obs_low)
+	rec_type=0, est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c"),
+	years=years, index=cpue_input, lengthfreq=lf_input, meanlen=meanlen_input, catch=NULL, obs_per_yr=obs_low)
 
 ### base with beverton-holt stock recruit 
 
 base_bh <- get_output(model_name="base_bh", dat_avail=c("lengthfreq", "index_total"),
 	rec_type=1, est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c"),
-	years=years, index=cpue_input, lengthfreq=lf_input, catch=NULL, obs_per_yr=obs_high)
+	years=years, index=cpue_input, lengthfreq=lf_input, meanlen=meanlen_input, catch=NULL, obs_per_yr=obs_high)
 
-#################
-## include catch
-#################
 
-wCatch <- get_output(model_name="wCatch", dat_avail=c("lengthfreq", "catch_total", "index_total"),
-	rec_type=0, est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "beta", "S50", "CV_l"),
-	years=years, index=cpue_input, lengthfreq=lf_input, catch=catch_input, obs_per_yr=obs_high)
+### low obs per year with beverton-holt stock recruit 
+
+bh_lowObs <- get_output(model_name="bh_lowObs", dat_avail=c("lengthfreq", "index_total"),
+	rec_type=1, est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c"),
+	years=years, index=cpue_input, lengthfreq=lf_input, meanlen=meanlen_input, catch=NULL, obs_per_yr=obs_low)
+
+## remove index
+
+rmIndex <- get_output(model_name="rmIndex", dat_avail=c("lengthfreq"),
+	rec_type=1, est_params=c("log_F_t_input", "log_sigma_R", "S50", "CV_l"),
+	years=years, index=NULL, lengthfreq=lf_input, meanlen=meanlen_input, catch=NULL, obs_per_yr=obs_high)
+
+## remove length comp
+
+subML <- get_output(model_name="subML", dat_avail=c("meanlength", "index_total"),
+	rec_type=1, est_params=c("log_F_t_input", "log_sigma_R", "log_q_I", "S50", "CV_c"),
+	years=years, index=cpue_input, lengthfreq=NULL, meanlen=meanlen_input, catch=NULL, obs_per_yr=obs_high)
 
 
 ## sensitivity - adjust F1 low
 
 F1low <- get_output(model_name="F1low", dat_avail=c("lengthfreq", "index_total"),
-	rec_type=0, est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c"),
-	years=years, index=cpue_input, lengthfreq=lf_input, catch=NULL, obs_per_yr=obs_high,
+	rec_type=1, est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c"),
+	years=years, index=cpue_input, lengthfreq=lf_input, meanlen=meanlen_input, catch=NULL, obs_per_yr=obs_high,
 	adjust_param="F1", adjust_val=0.01)
 
 ## sensitivity - adjust F1 high
 
 F1high <- get_output(model_name="F1high", dat_avail=c("lengthfreq", "index_total"),
-	rec_type=0, est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c"),
-	years=years, index=cpue_input, lengthfreq=lf_input, catch=NULL, obs_per_yr=obs_high,
+	rec_type=1, est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c"),
+	years=years, index=cpue_input, lengthfreq=lf_input, meanlen=meanlen_input, catch=NULL, obs_per_yr=obs_high,
 	adjust_param="F1", adjust_val=0.4)
 
 ## dome selex
 
 dome <- get_output(model_name="dome", dat_avail=c("lengthfreq", "index_total"),
-	rec_type=0, est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c"),
-	years=years, index=cpue_input, lengthfreq=lf_input, catch=NULL, obs_per_yr=obs_high,
+	rec_type=1, est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c"),
+	years=years, index=cpue_input, lengthfreq=lf_input, meanlen=meanlen_input, catch=NULL, obs_per_yr=obs_high,
 	adjust_param="dome", adjust_val=0.01)
 
 ## fix CVc
 
 fixCVc <- get_output(model_name="fixCVc", dat_avail=c("lengthfreq", "index_total"),
-	rec_type=0, est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l"),
-	years=years, index=cpue_input, lengthfreq=lf_input, catch=NULL, obs_per_yr=obs_high)
+	rec_type=1, est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l"),
+	years=years, index=cpue_input, lengthfreq=lf_input, meanlen=meanlen_input, catch=NULL, obs_per_yr=obs_high)
 
 
 ## retrospective
 
-index <- cpue_input
-lengthfreq <- lf_input
-catch <- NULL
-dat_avail <- c("lengthfreq", "index_total")
-est_params <- c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c")
-rec_type <- 0
-adjust_param <- FALSE
-adjust_val <- FALSE
-obs_meanlen <- ml$all_gears
+setwd(init_dir)
+source("R_functions\\functions.R")
+
+  retro_dir_high <- file.path(retro_dir, "obs_high")
+	dir.create(retro_dir_high, showWarnings=FALSE)
+  retro_dir_low <- file.path(retro_dir, "obs_low")
+	dir.create(retro_dir_low, showWarnings=FALSE)
+
+
+run_retro(index=cpue_input, lengthfreq=lf_input, meanlen=meanlen_input, catch=NULL, obs_per_yr=obs_high,
+	years=years, dat_avail=c("lengthfreq", "index_total"), 
+	est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c"),
+	rec_type=0, retro_dir=retro_dir_high)
+
+run_retro(index=cpue_input, lengthfreq=lf_input, meanlen=meanlen_input, catch=NULL, obs_per_yr=obs_low,
+	years=years, dat_avail=c("lengthfreq", "index_total"), 
+	est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c"),
+	rec_type=0, retro_dir=retro_dir_low)
+
+
+run_retro(index=cpue_input, lengthfreq=lf_input, meanlen=meanlen_input, catch=NULL, obs_per_yr=obs_high,
+	years=years, dat_avail=c("lengthfreq", "index_total"), 
+	est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c"),
+	rec_type=1, retro_dir=retro_dir_high)
+
+run_retro(index=cpue_input, lengthfreq=lf_input, meanlen=meanlen_input, catch=NULL, obs_per_yr=obs_low,
+	years=years, dat_avail=c("lengthfreq", "index_total"), 
+	est_params=c("log_F_t_input", "log_q_I", "log_sigma_R", "S50", "CV_l", "CV_c"),
+	rec_type=1, retro_dir=retro_dir_low)
+
+
+
+#### using Beverton-Holt stock recruit curve helps estimate recruitment variation with fewer years of data
+
+plot_retro(param="D", years=years, retro_dir=retro_dir_high, rec_type=0)
+plot_retro(param="F", years=years, retro_dir=retro_dir_high, rec_type=0)
+plot_retro(param="R", years=years, retro_dir=retro_dir_high, rec_type=0)
+
+plot_retro(param="D", years=years, retro_dir=retro_dir_low, rec_type=0)
+plot_retro(param="F", years=years, retro_dir=retro_dir_low, rec_type=0)
+plot_retro(param="R", years=years, retro_dir=retro_dir_low, rec_type=0)
+
+
+plot_retro(param="D", years=years, retro_dir=retro_dir_high, rec_type=1)
+plot_retro(param="F", years=years, retro_dir=retro_dir_high, rec_type=1)
+plot_retro(param="R", years=years, retro_dir=retro_dir_high, rec_type=1)
+
+plot_retro(param="D", years=years, retro_dir=retro_dir_low, rec_type=1)
+plot_retro(param="F", years=years, retro_dir=retro_dir_low, rec_type=1)
+plot_retro(param="R", years=years, retro_dir=retro_dir_low, rec_type=1)
+
