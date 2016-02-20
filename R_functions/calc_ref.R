@@ -16,10 +16,18 @@ calc_ref <- function(Mat_a, W_a, M, S_a, F, ref, cut=NULL){
 		SB0 <- sum(Na0[-1]*Mat_a[-1]*W_a[-1])
 		SBf <- sum(Naf[-1]*Mat_a[-1]*W_a[-1])
 
+		Caf <- rep(NA, length(W_a))
+		for(a in 1:length(W_a)){
+			Caf[a] <- Naf[a]*(1-exp(-M-F*S_a[a]))*(F*S_a[a])/(M+F*S_a[a])
+		}
+		Cf <- sum(Caf[-1])
+
 		SPR <- SBf/SB0
 		if(ref=="Fref"){
 			diff <- cut - SPR
 			return(diff)
 		}
 		if(ref=="SPR") return(SPR)
+		if(ref=="SBPR") return(SBf)
+		if(ref=="YPR") return(Cf)
 }

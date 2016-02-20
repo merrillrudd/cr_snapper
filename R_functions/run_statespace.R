@@ -118,7 +118,6 @@ opt <- tryCatch( nlminb( start=obj$par, objective=obj$fn, gradient=obj$gr, upper
       }
       if(all(is.na(opt))){
       	write("NAs final gradient", file.path(model_dir, "NAs_final_gradient.txt"))
-		    next
 	    }
       if(all(is.na(opt))==FALSE){
 
@@ -153,7 +152,6 @@ opt <- tryCatch( nlminb( start=obj$par, objective=obj$fn, gradient=obj$gr, upper
         }
         if(all(is.na(opt))){
       	  write("NAs final gradient", file.path(model_dir, "NAs_final_gradient.txt"))
-		  next
 	    } 
         if(abs(min(opt[["final_gradient"]]))>0.01) write(opt[["final_gradient"]], file.path(model_dir, "high_final_gradient.txt"))
       }      

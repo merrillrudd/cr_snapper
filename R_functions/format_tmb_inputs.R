@@ -52,6 +52,9 @@ format_tmb_inputs <- function(Nyears, Nlenbins, catch, index, lengthfreq, meanle
 		n_ml <- length(meanlen)
 		ML_yrs <- as.numeric(names(meanlen))
 		ML_t <- meanlen
+		n_lc <- 0
+		LC_yrs <- as.vector(0)
+		LF <- as.matrix(0)
 	}
 
 

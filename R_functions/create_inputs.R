@@ -1,4 +1,4 @@
-create_inputs <- function(simdir, param, val, lh_dat){
+create_inputs <- function(param, val, lh_dat){
 	
 	if(any(param==FALSE) & any(val==FALSE)){
 		dat_input <- lh_dat

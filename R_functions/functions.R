@@ -12,3 +12,12 @@ source("R_functions\\get_output.R")
 source("R_functions\\model_fits.R")
 source("R_functions\\run_retro.R")
 source("R_functions\\plot_retro.R")
+source("R_functions\\run_lprof.R")
+
+source("R_functions\\LBSPRSim.R")
+source("R_functions\\OptFun.R")
+source("R_functions\\DoOpt.R")
+
+source("R_functions\\calc_AIC.R")
+
+source("R_functions\\forecast.R")

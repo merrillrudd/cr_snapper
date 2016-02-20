@@ -1,7 +1,7 @@
 get_output <- function(model_name, dat_avail, rec_type, est_params, SPR_cut=0.3,
-	adjust_param=FALSE, adjust_val=FALSE, years, index, lengthfreq, catch, meanlen, obs_per_yr){
+	adjust_param=FALSE, adjust_val=FALSE, years, index, lengthfreq, catch, meanlen, obs_per_yr, lh){
 
-  dat_input <- create_inputs(simdir=model_name, param=adjust_param, val=adjust_val, lh_dat=cr_lh)  
+  dat_input <- create_inputs(param=adjust_param, val=adjust_val, lh_dat=lh)  
 
   model_dir <- file.path(init_dir, "output", model_name)
   if(file.exists(model_dir)) unlink(model_dir, TRUE)
@@ -17,14 +17,16 @@ get_output <- function(model_name, dat_avail, rec_type, est_params, SPR_cut=0.3,
   Fref <- uniroot(calc_ref, lower=0, upper=50, Mat_a=report$Mat_a, W_a=report$W_a, 
     M=report$M, S_a=report$S_a, ref="Fref", cut=0.3)$root  
 
-  SPR <- calc_ref(Mat_a=report$Mat_a, M=report$M, W_a=report$W_a,
+  SPR <- sapply(1:nrow(run_model$Ft), function(x) calc_ref(Mat_a=report$Mat_a, 
+    M=report$M, W_a=report$W_a,
   	S_a=report$S_a, ref="SPR",
-  	F=mean(run_model$Ft[(nrow(run_model$Ft)-2):nrow(run_model$Ft),"Estimate"]))  
+  	F=run_model$Ft[x,"Estimate"]))  
 
-  FFref <- run_model$Ft[nrow(run_model$Ft), "Estimate"]/Fref 
+  FFref <- run_model$Ft[,"Estimate"]/Fref 
 
   Outs <- NULL
   Outs$df <- run_model$df
+  Outs$Fref <- Fref
   Outs$FFref <- FFref
   Outs$SPR <- SPR
   Outs$report <- report
