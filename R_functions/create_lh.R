@@ -12,6 +12,8 @@ create_lh <- function(species, sens=FALSE, val=FALSE, selex){
 		AgeMax <- 23
 		F1 <- 0.34
 
+		SigmaR <- 0.6
+
 
 		## growth to estimate
 		CVlen <- 0.2
@@ -62,6 +64,7 @@ create_lh <- function(species, sens=FALSE, val=FALSE, selex){
 	Outs$CVcatch <- CVcatch
 	Outs$qcoef <- qcoef
 	Outs$SigmaF <- SigmaF
+	Outs$SigmaR <- SigmaR
 	Outs$S50 <- S50
 	Outs$Sslope <- Sslope
 	Outs$dome <- dome

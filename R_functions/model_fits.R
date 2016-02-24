@@ -29,7 +29,7 @@ model_fits <- function(Report, Sdreport, years, meanlen_obs, index_obs, catch_ob
         ## Depletion
         Mat <- cbind("Year"=years, "Est"=Report$Depl)
         ymax <- 1.1
-        matplot(y=Mat[,c("Est")], x=Mat[,c("Year")], type="l", col=c("red"), lty="solid", ylim=c(0, ymax), main="Depletion", lwd=2)
+        matplot(y=Mat[,c("Est")], x=Mat[,c("Year")], type="l", col=c("red"), lty="solid", ylim=c(0, ymax), main="Relative Abundance", lwd=2)
         if(all(is.na(Sdreport))==FALSE)if( !("condition" %in% names(attributes(Sdreport)))) polygon( y=FUN(summary(Sdreport)[which(rownames(summary(Sdreport))=="lD_t"),]), x=c(Mat[,c("Year")], rev(Mat[,c("Year")])), col=rgb(1,0,0,alpha=0.2), border=NA)
         ## Catch
         tcatch <- catch_obs
